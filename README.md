@@ -13,11 +13,11 @@
     │   └── services/
     │       ├── twilio.py         # Send WhatsApp message
     │       ├── news_api.py       # Calling the News API and filtering news
-    │       └── gemini.py         # (Optional) Summarization with Gemini or LLM
+    │       └─
     │
     ├── models/
     │   ├── user.py               # User model and preferences
-    │   └── message_log.py        # Message history
+    │   └─
     │
     ├── db/
     │   ├── database.py           # Connecting to SQLite or Postgres
