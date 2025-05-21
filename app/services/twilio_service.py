@@ -1,6 +1,8 @@
 import os
+import time
 from twilio.rest import Client
 from dotenv import load_dotenv
+from datetime import datetime
 
 load_dotenv()
 
@@ -8,64 +10,36 @@ ACCOUNT_SID = os.getenv("ACCOUNT_SID")
 API_KEY_SID = os.getenv("API_KEY_SID")
 API_KEY_SECRET = os.getenv("API_KEY_SECRET")
 CHAT_SERVICE_ID = os.getenv("CHAT_SERVICE_ID")
-TWILIO_WHATSAPP_NUMBER = os.getenv("TWILIO_WHATSAPP_NUMBER")
 
 client = Client(API_KEY_SID, API_KEY_SECRET, ACCOUNT_SID)
 
+# The last index read for each conversion.
+last_read_index = {}
 
-def get_or_create_conversation(user_number: str):
-    existing_conversations = client.conversations \
-        .v1.services(CHAT_SERVICE_ID) \
-        .conversations \
-        .list(limit=100)
+def poll_messages():
+    conversations = client.conversations.v1.services(CHAT_SERVICE_ID).conversations.list()
 
-    for conv in existing_conversations:
-        participants = client.conversations \
-            .v1.services(CHAT_SERVICE_ID) \
-            .conversations(conv.sid) \
-            .participants \
-            .list()
-        for p in participants:
-            if p.messaging_binding and p.messaging_binding.get("address") == user_number:
-                return conv.sid
+    for conv in conversations:
+        conv_sid = conv.sid
+        messages = client.conversations.v1.services(CHAT_SERVICE_ID).conversations(conv_sid).messages.list(order='asc')
 
-    # If the previous conversation is not found
-    conv = client.conversations \
-        .v1.services(CHAT_SERVICE_ID) \
-        .conversations \
-        .create(friendly_name=f"chat_with_{user_number}")
-    return conv.sid
+        # Check the latest new messages
+        for message in messages:
+            if conv_sid not in last_read_index or message.index > last_read_index[conv_sid]:
+                print(f"[{message.date_created}] From {message.author}: {message.body}")
+                last_read_index[conv_sid] = message.index
 
 
-def participant_exists(conversation_sid: str, user_number: str) -> bool:
-    participants = client.conversations \
-        .v1.services(CHAT_SERVICE_ID) \
-        .conversations(conversation_sid) \
-        .participants \
-        .list()
-    for p in participants:
-        if p.messaging_binding and p.messaging_binding.get("address") == user_number:
-            return True
-    return False
+def main():
+    """ Infinity loop for polling every 2 seconds. """
+    print("Polling for new messages... (Press CTRL+C to stop)")
+    try:
+        while True:
+            poll_messages()
+            time.sleep(2)  # Check every 5 seconds
+    except KeyboardInterrupt:
+        print("Stopped polling.")
 
 
-def add_participant(conversation_sid: str, user_number: str):
-    if not participant_exists(conversation_sid, user_number):
-        participant = client.conversations \
-            .v1.services(CHAT_SERVICE_ID) \
-            .conversations(conversation_sid) \
-            .participants \
-            .create(
-                messaging_binding_address=user_number,
-                messaging_binding_proxy_address=TWILIO_WHATSAPP_NUMBER
-            )
-        print(participant.account_sid)
-
-
-def send_message(conversation_sid: str , message: str):
-    client.conversations \
-        .v1.services(CHAT_SERVICE_ID) \
-        .conversations(conversation_sid) \
-        .messages \
-        .create(author="system", body=message)
-
+if __name__ == "__main__":
+    main()
