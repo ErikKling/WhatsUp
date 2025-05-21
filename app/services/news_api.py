@@ -18,7 +18,7 @@ class NewsAPI:
         }
 
     def get_top_articles(self, limit=3):
-        '''Returns the top 3 newest articles.'''
+        """ Returns the top 3 newest articles. """
 
         response = requests.get(self.base_url, params=self.params)
         data = response.json()
