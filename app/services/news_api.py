@@ -17,11 +17,19 @@ class NewsAPI:
             "apiKey": self.api_key
         }
 
-    def get_top_articles(self, limit=3):
-        """ Returns the top 3 newest articles. """
 
+    def get_top_articles(self, limit=3):
         response = requests.get(self.base_url, params=self.params)
+        
+        if response.status_code != 200:
+            print("Invalid response from NewsAPI:", response.status_code)
+            return []
+
         data = response.json()
+
+        if "articles" not in data:
+            print("Missing ‘articles’ field in NewsAPI response:", data)
+            return []
 
         results = []
 
@@ -29,6 +37,7 @@ class NewsAPI:
             results.append({
                 "name": article["source"]["name"],
                 "title": article["title"],
-                "url": article["url"]})
-            
+                "url": article["url"]
+            })
+
         return results

@@ -43,17 +43,26 @@ def get_or_create_conversation(user_number: str):
 
 
 def poll_messages(callback):
+    #  Ignore all existing messages
+    conversations = client.conversations.v1.services(CHAT_SERVICE_ID).conversations.list()
+    for conv in conversations:
+        messages = client.conversations.v1.services(CHAT_SERVICE_ID).conversations(conv.sid).messages.list(limit=10)
+        for msg in messages:
+            _seen_messages.add(msg.sid)
+
     while True:
         conversations = client.conversations.v1.services(CHAT_SERVICE_ID).conversations.list()
         now = datetime.now(timezone.utc)
 
         for conv in conversations:
-            messages = client.conversations.v1.services(CHAT_SERVICE_ID).conversations(conv.sid).messages.list()
+            messages = client.conversations.v1.services(CHAT_SERVICE_ID).conversations(conv.sid).messages.list(order='desc')
             for msg in messages:
-                key = f"{conv.sid}-{msg.index}"
-                if key not in _seen_messages and msg.author != "system":
-                    if msg.date_created and msg.date_created > now - timedelta(seconds=5):
+                if msg.date_created and msg.date_created > now - timedelta(seconds=30):
+                    key = msg.sid
+                    if key not in _seen_messages:
                         _seen_messages.add(key)
-                        print(_seen_messages)
+                        if msg.author == "system" or msg.author == TWILIO_WHATSAPP_NUMBER:
+                            continue
+                        print(f"New message detected: {msg.body}")
                         callback(msg.author, msg.body)
-        time.sleep(3)
+        time.sleep(0.5)
