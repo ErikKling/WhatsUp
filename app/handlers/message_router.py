@@ -14,10 +14,13 @@ category_map = {
 user_states = {} #global user status
 
 def route_message(user_number: str, message_text: str):
-
+    """
+    Decides which service to call depending on the user's message.
+    :param user_number: user's whatsapp number
+    :param message_text: message text
+    """
     text = message_text.strip().lower()
 
-    
     if text == "thanks": #thanks to reset
         send_whatsapp_message(user_number, "You’re welcome! Send a new message to start again.")
         user_states.pop(user_number, None)
