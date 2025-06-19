@@ -14,16 +14,24 @@ TWILIO_WHATSAPP_NUMBER = os.getenv("TWILIO_WHATSAPP_NUMBER")
 
 client = Client(API_KEY_SID, API_KEY_SECRET, ACCOUNT_SID)
 
+# Messages history
 _seen_messages = set()
 
 
 def send_whatsapp_message(user_number: str, message: str):
+    """ It sends messsage to users. """
     conv = get_or_create_conversation(user_number)
     client.conversations.v1.services(CHAT_SERVICE_ID).conversations(conv).messages.create(
         author="system", body=message)
 
 
 def get_or_create_conversation(user_number: str):
+    """
+    It gets all conversations and participant and
+    :param user_number: user's whatsapp number
+    :return: conversation sid
+    """
+
     conversations = client.conversations.v1.services(CHAT_SERVICE_ID).conversations.list()
     for conv in conversations:
         participants = client.conversations.v1.services(CHAT_SERVICE_ID).conversations(conv.sid).participants.list()
@@ -43,6 +51,12 @@ def get_or_create_conversation(user_number: str):
 
 
 def poll_messages(callback):
+    """
+    As soon as it receives new messages, Creates a unique key for each message, and it
+    records them in a set called _seen_messages.it always checks that the messages sent
+    by the bot itself and the messages from users are not stored duplicated due to the continuous loop.
+    :param callback: a function
+    """
     #  Ignore all existing messages
     conversations = client.conversations.v1.services(CHAT_SERVICE_ID).conversations.list()
     for conv in conversations:
